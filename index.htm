@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCA Quiz App</title>
+<style>
+  /* ---------- Basic page setup ---------- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f0f4ff;
+    color: #1e2447;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  /* ---------- The quiz card ---------- */
+  .card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 480px;          /* stays readable on laptop, fills a phone */
+    margin-top: 24px;
+    padding: 28px 22px;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(30, 36, 71, 0.12);
+  }
+  h1 {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #6b7194;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  /* ---------- Question area ---------- */
+  .progress {
+    font-size: 0.85rem;
+    color: #6b7194;
+    margin-bottom: 8px;
+  }
+  .question {
+    font-size: 1.15rem;
+    font-weight: bold;
+    margin-bottom: 18px;
+    line-height: 1.4;
+  }
+
+  /* ---------- Answer buttons (big enough for phone taps) ---------- */
+  .option {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    text-align: left;
+    border: 2px solid #d4daf5;
+    border-radius: 10px;
+    background: #f8faff;
+    cursor: pointer;
+  }
+  .option:hover { background: #e9edff; }
+  .option.correct { border-color: #22a06b; background: #e3f7ee; }
+  .option.wrong   { border-color: #e05252; background: #fdecec; }
+  .option:disabled { cursor: default; }
+
+  /* ---------- Next / restart button ---------- */
+  .action {
+    display: none;             /* hidden until an answer is picked */
+    width: 100%;
+    padding: 14px;
+    margin-top: 6px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ffffff;
+    background: #4353d6;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .action:hover { background: #3543b8; }
+
+  /* ---------- Final score ---------- */
+  .score-box { text-align: center; padding: 20px 0; }
+  .score-box .big { font-size: 2.4rem; font-weight: bold; color: #4353d6; }
+  .score-box p { color: #6b7194; margin: 10px 0 18px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Dharnesh Quiz App</h1>
+  <p class="subtitle">Test your computer basics</p>
+
+  <!-- Quiz view -->
+  <div id="quiz">
+    <p class="progress" id="progress"></p>
+    <p class="question" id="question"></p>
+    <div id="options"></div>
+    <button class="action" id="nextBtn">Next</button>
+  </div>
+
+  <!-- Score view (hidden until the end) -->
+  <div class="score-box" id="scoreBox" style="display:none;">
+    <p class="big" id="scoreText"></p>
+    <p id="scoreMessage"></p>
+    <button class="action" id="restartBtn" style="display:block;">Play again</button>
+  </div>
+</div>
+
+<script>
+  // ---------- The quiz data: question, 4 options, index of the right one ----------
+  var questions = [
+    {
+      question: "What does CPU stand for?",
+      options: ["Central Processing Unit", "Computer Personal Unit", "Central Program Utility", "Computer Processing Unit"],
+      answer: 0
+    },
+    {
+      question: "Which language is used to style web pages?",
+      options: ["HTML", "CSS", "Java", "SQL"],
+      answer: 1
+    },
+    {
+      question: "Which of these is a database language?",
+      options: ["HTML", "CSS", "SQL", "HTTP"],
+      answer: 2
+    }
+  ];
+
+  var current = 0;   // which question we are on
+  var score = 0;     // how many correct answers
+
+  var questionEl = document.getElementById("question");
+  var optionsEl  = document.getElementById("options");
+  var progressEl = document.getElementById("progress");
+  var nextBtn    = document.getElementById("nextBtn");
+  var quizBox    = document.getElementById("quiz");
+  var scoreBox   = document.getElementById("scoreBox");
+  var scoreText  = document.getElementById("scoreText");
+  var scoreMsg   = document.getElementById("scoreMessage");
+  var restartBtn = document.getElementById("restartBtn");
+
+  // ---------- Show one question on screen ----------
+  function showQuestion() {
+    var q = questions[current];
+    progressEl.textContent = "Question " + (current + 1) + " of " + questions.length;
+    questionEl.textContent = q.question;
+    optionsEl.innerHTML = "";   // clear old buttons
+
+    for (var i = 0; i < q.options.length; i++) {
+      var btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = q.options[i];
+      btn.dataset.index = i;
+      btn.onclick = pickAnswer;
+      optionsEl.appendChild(btn);
+    }
+    nextBtn.style.display = "none";
+  }
+
+  // ---------- Runs when the player taps an option ----------
+  function pickAnswer(event) {
+    var chosen = Number(event.target.dataset.index);
+    var q = questions[current];
+    var buttons = optionsEl.getElementsByClassName("option");
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].disabled = true;               // lock the answers
+      if (i === q.answer) buttons[i].classList.add("correct");
+    }
+    if (chosen === q.answer) {
+      score = score + 1;
+    } else {
+      event.target.classList.add("wrong");      // show their wrong pick too
+    }
+    nextBtn.style.display = "block";
+  }
+
+  // ---------- Next question, or the final score ----------
+  nextBtn.onclick = function () {
+    current = current + 1;
+    if (current < questions.length) {
+      showQuestion();
+    } else {
+      showScore();
+    }
+  };
+
+  function showScore() {
+    quizBox.style.display = "none";
+    scoreBox.style.display = "block";
+    scoreText.textContent = score + " / " + questions.length;
+    if (score === questions.length) {
+      scoreMsg.textContent = "Perfect score. Nice work!";
+    } else if (score > 0) {
+      scoreMsg.textContent = "Good try - play again and beat your score.";
+    } else {
+      scoreMsg.textContent = "Tough round. Try again!";
+    }
+  }
+
+  restartBtn.onclick = function () {
+    current = 0;
+    score = 0;
+    scoreBox.style.display = "none";
+    quizBox.style.display = "block";
+    showQuestion();
+  };
+
+  // ---------- Start the quiz ----------
+  showQuestion();
+</script>
+
+</body>
+</html>
